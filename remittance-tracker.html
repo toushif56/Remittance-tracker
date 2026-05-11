@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>remittance tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Tiro+Bangla&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --card: #111827;
+    --card2: #1a2235;
+    --accent: #f59e0b;
+    --accent2: #fbbf24;
+    --green: #10b981;
+    --red: #ef4444;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: #1e293b;
+    --input-bg: #0f172a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Hind Siliguri', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image: 
+      radial-gradient(ellipse at 20% 20%, rgba(245,158,11,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(16,185,129,0.05) 0%, transparent 50%);
+  }
+
+  /* PIN SCREEN */
+  #pin-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    gap: 32px;
+  }
+  .pin-logo {
+    font-family: 'Tiro Bangla', serif;
+    font-size: 2rem;
+    color: var(--accent);
+    text-align: center;
+    line-height: 1.3;
+  }
+  .pin-logo span { display: block; font-size: 0.85rem; color: var(--muted); font-family: 'Hind Siliguri', sans-serif; margin-top: 6px; }
+  .pin-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px 40px;
+    text-align: center;
+    width: 320px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+  }
+  .pin-label { color: var(--muted); font-size: 0.85rem; margin-bottom: 16px; letter-spacing: 0.05em; }
+  .pin-dots { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
+  .pin-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--border);
+    background: transparent;
+    transition: all 0.2s;
+  }
+  .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+  .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .pin-btn {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 1.3rem;
+    font-family: inherit;
+    padding: 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .pin-btn:hover { background: var(--card2); border-color: var(--accent); color: var(--accent); }
+  .pin-btn.del { color: var(--red); font-size: 1rem; }
+  .pin-error { color: var(--red); font-size: 0.82rem; margin-top: 12px; min-height: 18px; }
+  .pin-shake { animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)}
+  }
+
+  /* MAIN APP */
+  #app { display: none; }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-title {
+    font-family: 'Tiro Bangla', serif;
+    font-size: 1.25rem;
+    color: var(--accent);
+  }
+  .header-title span { display: block; font-size: 0.72rem; color: var(--muted); font-family: 'Hind Siliguri', sans-serif; }
+  .header-btns { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    padding: 9px 18px; border-radius: 10px; border: none;
+    font-family: 'Hind Siliguri', sans-serif;
+    font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-green:hover { opacity: 0.85; }
+  .btn-danger { background: transparent; border: 1px solid var(--red); color: var(--red); }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+
+  main { padding: 24px; max-width: 900px; margin: 0 auto; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 4px; background: var(--card); border-radius: 14px; padding: 6px; margin-bottom: 28px; }
+  .tab-btn {
+    flex: 1; padding: 10px; border: none; border-radius: 10px;
+    background: transparent; color: var(--muted);
+    font-family: 'Hind Siliguri', sans-serif; font-size: 0.88rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--accent); color: #000; font-weight: 700; }
+
+  /* DASHBOARD */
+  .dash-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .dash-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px;
+    position: relative; overflow: hidden;
+  }
+  .dash-card::before {
+    content: ''; position: absolute;
+    top: -20px; right: -20px;
+    width: 80px; height: 80px; border-radius: 50%;
+    opacity: 0.08;
+  }
+  .dash-card.total::before { background: var(--accent); }
+  .dash-card.cost::before { background: var(--red); }
+  .dash-card.net::before { background: var(--green); }
+  .dash-card.count::before { background: #a78bfa; }
+  .dash-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .dash-value { font-size: 1.9rem; font-weight: 700; line-height: 1; }
+  .dash-value.gold { color: var(--accent); }
+  .dash-value.danger { color: var(--red); }
+  .dash-value.success { color: var(--green); }
+  .dash-value.purple { color: #a78bfa; }
+  .dash-sub { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+
+  .dash-cards-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+
+  /* CHART */
+  .chart-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 24px; margin-bottom: 28px;
+  }
+  .chart-title { font-size: 0.88rem; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
+  .bar-bar { width: 100%; border-radius: 6px 6px 0 0; background: var(--accent); opacity: 0.75; transition: all 0.3s; min-height: 2px; }
+  .bar-bar:hover { opacity: 1; }
+  .bar-label { font-size: 0.62rem; color: var(--muted); text-align: center; }
+
+  /* ADD FORM */
+  .form-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 28px; margin-bottom: 24px;
+  }
+  .form-title { font-size: 1rem; font-weight: 600; margin-bottom: 20px; color: var(--accent); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1/-1; }
+  label { font-size: 0.78rem; color: var(--muted); font-weight: 500; letter-spacing: 0.03em; }
+  input, select, textarea {
+    background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 11px 14px;
+    color: var(--text); font-family: 'Hind Siliguri', sans-serif;
+    font-size: 0.9rem; outline: none; transition: border 0.2s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--card); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  /* HISTORY */
+  .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+  .history-title { font-size: 1rem; font-weight: 600; color: var(--text); }
+  .search-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 14px;
+    color: var(--text); font-family: 'Hind Siliguri', sans-serif;
+    font-size: 0.85rem; outline: none; width: 200px;
+  }
+  .search-box:focus { border-color: var(--accent); }
+
+  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    padding: 13px 16px; text-align: left;
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); background: var(--card2);
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 14px 16px; font-size: 0.88rem; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(245,158,11,0.03); }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 600;
+  }
+  .badge-bkash { background: rgba(230,57,70,0.15); color: #f87171; }
+  .badge-nagad { background: rgba(245,158,11,0.15); color: var(--accent); }
+  .badge-rocket { background: rgba(167,139,250,0.15); color: #a78bfa; }
+  .badge-bank { background: rgba(16,185,129,0.15); color: var(--green); }
+  .badge-western { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .badge-other { background: rgba(148,163,184,0.15); color: var(--muted); }
+  .del-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); padding: 4px 10px; border-radius: 8px;
+    cursor: pointer; font-size: 0.75rem; transition: all 0.2s;
+  }
+  .del-btn:hover { border-color: var(--red); color: var(--red); }
+  .empty-state { text-align: center; padding: 48px; color: var(--muted); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+
+  /* IMPORT/EXPORT */
+  .io-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; padding: 28px;
+  }
+  .io-title { font-size: 1rem; font-weight: 600; color: var(--accent); margin-bottom: 20px; }
+  .io-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .io-section {
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px;
+  }
+  .io-section-title { font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+  .io-section-desc { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  .file-input-wrap { position: relative; }
+  .file-input-wrap input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 2; }
+  .file-input-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--input-bg); border: 1px dashed var(--border);
+    border-radius: 10px; padding: 14px; color: var(--muted);
+    font-size: 0.82rem; cursor: pointer; transition: all 0.2s;
+    justify-content: center;
+  }
+  .file-input-btn:hover { border-color: var(--green); color: var(--green); }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 20px;
+    font-size: 0.85rem; color: var(--text);
+    z-index: 999; transform: translateY(80px); opacity: 0;
+    transition: all 0.3s; display: flex; align-items: center; gap: 8px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); }
+
+  @media (max-width: 600px) {
+    .dash-cards { grid-template-columns: 1fr; }
+    .dash-cards-3 { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .io-grid { grid-template-columns: 1fr; }
+    main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PIN SCREEN -->
+<div id="pin-screen">
+  <div class="pin-logo">
+    💸 remittance tracker
+    <span>PIN দিয়ে প্রবেশ করুন</span>
+  </div>
+  <div class="pin-box" id="pin-box">
+    <div class="pin-label">৪ সংখ্যার PIN দিন</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+
+    </div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pinKey('1')">1</button>
+      <button class="pin-btn" onclick="pinKey('2')">2</button>
+      <button class="pin-btn" onclick="pinKey('3')">3</button>
+      <button class="pin-btn" onclick="pinKey('4')">4</button>
+      <button class="pin-btn" onclick="pinKey('5')">5</button>
+      <button class="pin-btn" onclick="pinKey('6')">6</button>
+      <button class="pin-btn" onclick="pinKey('7')">7</button>
+      <button class="pin-btn" onclick="pinKey('8')">8</button>
+      <button class="pin-btn" onclick="pinKey('9')">9</button>
+      <button class="pin-btn" onclick="pinKey('')" style="visibility:hidden"></button>
+      <button class="pin-btn" onclick="pinKey('0')">0</button>
+      <button class="pin-btn del" onclick="pinDel()">⌫</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <header>
+    <div class="header-title">
+      💸 Transection history
+      <span>Remittance Tracker</span>
+    </div>
+    <div class="header-btns">
+      <button class="btn btn-outline" onclick="showTab('io')">📥 Import/Export</button>
+      <button class="btn btn-outline" onclick="lockApp()">🔒 লক</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-dash" onclick="showTab('dash')">📊 ড্যাশবোর্ড</button>
+      <button class="tab-btn" id="tab-add" onclick="showTab('add')">➕ নতুন যোগ করুন</button>
+      <button class="tab-btn" id="tab-history" onclick="showTab('history')">📋 ট্রানজেকশন হিস্ট্রি</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="tab-dash-content">
+      <div class="dash-cards">
+        <div class="dash-card total">
+          <div class="dash-label">মোট পাঠানো টাকা</div>
+          <div class="dash-value gold" id="stat-total">৳ ০</div>
+          <div class="dash-sub" id="stat-count-sub">মোট ০ টি ট্রানজেকশন</div>
+        </div>
+        <div class="dash-card cost">
+          <div class="dash-label">মোট খরচ</div>
+          <div class="dash-value danger" id="stat-cost">৳ ০</div>
+          <div class="dash-sub">উত্তোলন খরচ</div>
+        </div>
+      </div>
+      <div class="dash-cards-3">
+        <div class="dash-card net">
+          <div class="dash-label">নেট পাওয়া</div>
+          <div class="dash-value success" id="stat-net">৳ ০</div>
+          <div class="dash-sub">মোট - খরচ</div>
+        </div>
+        <div class="dash-card count">
+          <div class="dash-label">ট্রানজেকশন সংখ্যা</div>
+          <div class="dash-value purple" id="stat-count">০</div>
+          <div class="dash-sub">মোট বার</div>
+        </div>
+        <div class="dash-card" style="border-color:rgba(245,158,11,0.3)">
+          <div class="dash-label">গড় পাঠানো</div>
+          <div class="dash-value gold" id="stat-avg">৳ ০</div>
+          <div class="dash-sub">প্রতি ট্রানজেকশন</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">📈 মাসভিত্তিক টাকার পরিমাণ</div>
+        <div class="bar-chart" id="bar-chart">
+          <div class="empty-state" style="width:100%;padding:20px">কোনো ডেটা নেই</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD FORM -->
+    <div id="tab-add-content" style="display:none">
+      <div class="form-card">
+        <div class="form-title">➕ নতুন ট্রানজেকশন যোগ করুন</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>তারিখ (কবে পাঠিয়েছে)</label>
+            <input type="date" id="f-date">
+          </div>
+          <div class="form-group">
+            <label>পাঠানো টাকার পরিমাণ (৳)</label>
+            <input type="number" id="f-amount" placeholder="যেমন: 15000">
+          </div>
+          <div class="form-group">
+            <label>মাধ্যম (কিসে পাঠিয়েছে)</label>
+            <select id="f-method">
+              <option value="">-- মাধ্যম বেছে নিন --</option>
+              <option value="bKash">bKash</option>
+              <option value="Nagad">Nagad</option>
+              <option value="Rocket">Rocket</option>
+              <option value="Bank">ব্যাংক ট্রান্সফার</option>
+              <option value="Western Union">Western Union</option>
+              <option value="Other">অন্যান্য</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>উত্তোলন খরচ (৳)</label>
+            <input type="number" id="f-charge" placeholder="যেমন: 150">
+          </div>
+          <div class="form-group full">
+            <label>নোট (ঐচ্ছিক)</label>
+            <textarea id="f-note" placeholder="কোনো বিশেষ মন্তব্য..."></textarea>
+          </div>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="addTransaction()">✅ সেভ করুন</button>
+          <button class="btn btn-outline" onclick="clearForm()">🗑 ক্লিয়ার</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="tab-history-content" style="display:none">
+      <div class="history-header">
+        <div class="history-title">📋 সমস্ত ট্রানজেকশন</div>
+        <input class="search-box" type="text" placeholder="🔍 খুঁজুন..." oninput="filterTable(this.value)" id="search-input">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>তারিখ</th>
+              <th>পরিমাণ</th>
+              <th>মাধ্যম</th>
+              <th>খরচ</th>
+              <th>নেট</th>
+              <th>নোট</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="history-body">
+            <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📭</div>কোনো ট্রানজেকশন নেই</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- IMPORT / EXPORT -->
+    <div id="tab-io-content" style="display:none">
+      <div class="io-card">
+        <div class="io-title">📥📤 ডেটা ব্যাকআপ ও রিস্টোর</div>
+        <div class="io-grid">
+          <div class="io-section">
+            <div class="io-section-title">📤 ডাউনলোড (Google Sheets CSV)</div>
+            <div class="io-section-desc">সব ট্রানজেকশন CSV ফরম্যাটে ডাউনলোড হবে। Google Sheets এ ওপেন করতে পারবেন এবং সেভ করতে পারবেন।</div>
+            <button class="btn btn-primary" onclick="exportCSV()" style="width:100%">📥 CSV ডাউনলোড করুন</button>
+            <div style="margin-top:12px;font-size:0.75rem;color:var(--muted)">💡 ডাউনলোডের পর Google Sheets → File → Import দিয়ে ওপেন করুন</div>
+          </div>
+          <div class="io-section">
+            <div class="io-section-title">📁 আপলোড (ডেটা রিস্টোর)</div>
+            <div class="io-section-desc">আগের CSV ফাইল আপলোড করলে সব ডেটা ফিরে আসবে। বিদ্যমান ডেটা মুছে নতুন ডেটা লোড হবে।</div>
+            <div class="file-input-wrap">
+              <input type="file" accept=".csv" onchange="importCSV(this)">
+              <div class="file-input-btn">📁 CSV ফাইল বেছে নিন</div>
+            </div>
+            <div style="margin-top:12px;font-size:0.75rem;color:var(--muted)">⚠️ আপলোড করলে বিদ্যমান ডেটা প্রতিস্থাপিত হবে</div>
+          </div>
+        </div>
+
+        <div style="margin-top:24px;padding:16px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:12px;">
+          <div style="font-size:0.85rem;font-weight:600;color:var(--green);margin-bottom:8px">🔄 Google Sheets এ কীভাবে ব্যবহার করবেন:</div>
+          <ol style="font-size:0.78rem;color:var(--muted);line-height:1.9;padding-left:18px">
+            <li>উপরে <strong style="color:var(--text)">CSV ডাউনলোড করুন</strong> বাটনে ক্লিক করুন</li>
+            <li>Google Sheets খুলুন → <strong style="color:var(--text)">File → Import</strong></li>
+            <li>ডাউনলোড করা CSV ফাইল আপলোড করুন</li>
+            <li>ডেটা দেখতে ও এডিট করতে পারবেন Sheets এ</li>
+            <li>ডেটা রিস্টোর করতে এখানে CSV আপলোড করুন</li>
+          </ol>
+        </div>
+
+        <div style="margin-top:16px;text-align:center">
+          <button class="btn btn-danger" onclick="clearAllData()" style="font-size:0.78rem">🗑 সব ডেটা মুছে ফেলুন</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CORRECT_PIN = '6859';
+const STORAGE_KEY = 'abbu_remittance_v1';
+let pinInput = '';
+let transactions = [];
+let filterText = '';
+
+// ===== PIN =====
+function pinKey(n) {
+  if (!n) return;
+  if (pinInput.length >= 4) return;
+  pinInput += n;
+  updateDots();
+  if (pinInput.length === 4) setTimeout(checkPin, 150);
+}
+function pinDel() {
+  pinInput = pinInput.slice(0, -1);
+  updateDots();
+  document.getElementById('pin-error').textContent = '';
+}
+function updateDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('d'+i).classList.toggle('filled', i < pinInput.length);
+  }
+}
+function checkPin() {
+  if (pinInput === CORRECT_PIN) {
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadData();
+    updateDashboard();
+    renderHistory();
+  } else {
+    document.getElementById('pin-error').textContent = '❌ ভুল PIN! আবার চেষ্টা করুন';
+    document.getElementById('pin-box').classList.add('pin-shake');
+    setTimeout(() => document.getElementById('pin-box').classList.remove('pin-shake'), 500);
+    pinInput = '';
+    updateDots();
+  }
+}
+// Keyboard support for PIN
+document.addEventListener('keydown', e => {
+  if (document.getElementById('pin-screen').style.display !== 'none') {
+    if (e.key >= '0' && e.key <= '9') pinKey(e.key);
+    if (e.key === 'Backspace') pinDel();
+  }
+});
+function lockApp() {
+  pinInput = '';
+  updateDots();
+  document.getElementById('pin-error').textContent = '';
+  document.getElementById('pin-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+// ===== DATA =====
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    transactions = raw ? JSON.parse(raw) : [];
+  } catch { transactions = []; }
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+}
+
+// ===== TABS =====
+function showTab(tab) {
+  ['dash','add','history','io'].forEach(t => {
+    document.getElementById('tab-'+t+'-content').style.display = (t===tab)?'block':'none';
+    const btn = document.getElementById('tab-'+t);
+    if (btn) btn.classList.toggle('active', t===tab);
+  });
+  if (tab==='history') renderHistory();
+  if (tab==='dash') updateDashboard();
+}
+
+// ===== ADD =====
+function addTransaction() {
+  const date = document.getElementById('f-date').value;
+  const amount = parseFloat(document.getElementById('f-amount').value);
+  const method = document.getElementById('f-method').value;
+  const charge = parseFloat(document.getElementById('f-charge').value) || 0;
+  const note = document.getElementById('f-note').value.trim();
+  if (!date) { showToast('❌ তারিখ দিন', 'error'); return; }
+  if (!amount || amount <= 0) { showToast('❌ সঠিক পরিমাণ দিন', 'error'); return; }
+  if (!method) { showToast('❌ মাধ্যম বেছে নিন', 'error'); return; }
+  const tx = { id: Date.now(), date, amount, method, charge, note };
+  transactions.unshift(tx);
+  saveData();
+  updateDashboard();
+  renderHistory();
+  clearForm();
+  showToast('✅ ট্রানজেকশন সেভ হয়েছে!', 'success');
+  showTab('history');
+}
+function clearForm() {
+  document.getElementById('f-date').value = '';
+  document.getElementById('f-amount').value = '';
+  document.getElementById('f-method').value = '';
+  document.getElementById('f-charge').value = '';
+  document.getElementById('f-note').value = '';
+}
+function deleteTransaction(id) {
+  if (!confirm('এই ট্রানজেকশন মুছে ফেলবেন?')) return;
+  transactions = transactions.filter(t => t.id !== id);
+  saveData();
+  updateDashboard();
+  renderHistory();
+  showToast('🗑 মুছে ফেলা হয়েছে', 'error');
+}
+
+// ===== DASHBOARD =====
+function fmt(n) { return '৳ ' + Math.round(n).toLocaleString('en-IN'); }
+function updateDashboard() {
+  const total = transactions.reduce((s,t) => s + t.amount, 0);
+  const cost = transactions.reduce((s,t) => s + t.charge, 0);
+  const net = total - cost;
+  const count = transactions.length;
+  const avg = count ? total/count : 0;
+  document.getElementById('stat-total').textContent = fmt(total);
+  document.getElementById('stat-cost').textContent = fmt(cost);
+  document.getElementById('stat-net').textContent = fmt(net);
+  document.getElementById('stat-count').textContent = count;
+  document.getElementById('stat-avg').textContent = fmt(avg);
+  document.getElementById('stat-count-sub').textContent = 'মোট ' + count + ' টি ট্রানজেকশন';
+  renderBarChart();
+}
+function renderBarChart() {
+  const monthMap = {};
+  transactions.forEach(t => {
+    const m = t.date.slice(0,7);
+    monthMap[m] = (monthMap[m]||0) + t.amount;
+  });
+  const entries = Object.entries(monthMap).sort((a,b)=>a[0].localeCompare(b[0])).slice(-8);
+  const chart = document.getElementById('bar-chart');
+  if (!entries.length) { chart.innerHTML = '<div class="empty-state" style="width:100%;padding:20px">কোনো ডেটা নেই</div>'; return; }
+  const max = Math.max(...entries.map(e=>e[1]));
+  chart.innerHTML = entries.map(([m, v]) => {
+    const h = Math.max(4, Math.round((v/max)*100));
+    const mn = m.slice(5);
+    return `<div class="bar-wrap"><div class="bar-bar" style="height:${h}%" title="${fmt(v)}"></div><div class="bar-label">${mn}</div></div>`;
+  }).join('');
+}
+
+// ===== HISTORY =====
+function methodBadge(m) {
+  const cls = {bKash:'bkash',Nagad:'nagad',Rocket:'rocket','Bank':'bank','Western Union':'western','Other':'other'}[m]||'other';
+  return `<span class="badge badge-${cls}">${m}</span>`;
+}
+function renderHistory() {
+  const q = (document.getElementById('search-input')?.value||'').toLowerCase();
+  const list = transactions.filter(t =>
+    t.date.includes(q) || t.method.toLowerCase().includes(q) || (t.note||'').toLowerCase().includes(q)
+    || String(t.amount).includes(q)
+  );
+  const body = document.getElementById('history-body');
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">📭</div>কোনো ট্রানজেকশন নেই</div></td></tr>';
+    return;
+  }
+  body.innerHTML = list.map(t => `<tr>
+    <td>${t.date}</td>
+    <td style="color:var(--accent);font-weight:600">${fmt(t.amount)}</td>
+    <td>${methodBadge(t.method)}</td>
+    <td style="color:var(--red)">${t.charge ? fmt(t.charge) : '—'}</td>
+    <td style="color:var(--green)">${fmt(t.amount - t.charge)}</td>
+    <td style="color:var(--muted);font-size:0.8rem">${t.note||'—'}</td>
+    <td><button class="del-btn" onclick="deleteTransaction(${t.id})">মুছুন</button></td>
+  </tr>`).join('');
+}
+function filterTable(q) { renderHistory(); }
+
+// ===== EXPORT CSV =====
+function exportCSV() {
+  if (!transactions.length) { showToast('❌ কোনো ডেটা নেই', 'error'); return; }
+  const header = ['তারিখ','পরিমাণ (৳)','মাধ্যম','খরচ (৳)','নেট (৳)','নোট'];
+  const rows = transactions.map(t => [
+    t.date, t.amount, t.method, t.charge, t.amount-t.charge, t.note||''
+  ]);
+  // Add BOM for UTF-8 (important for Bangla in Excel/Sheets)
+  const bom = '\uFEFF';
+  const csv = bom + [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'abbu_remittance_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('✅ CSV ডাউনলোড হয়েছে! Google Sheets এ Import করুন', 'success');
+}
+
+// ===== IMPORT CSV =====
+function importCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      let text = e.target.result;
+      // Remove BOM
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) { showToast('❌ ফাইলে ডেটা নেই', 'error'); return; }
+      const newTx = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVLine(lines[i]);
+        if (cols.length < 4) continue;
+        const tx = {
+          id: Date.now() + i,
+          date: cols[0],
+          amount: parseFloat(cols[1])||0,
+          method: cols[2],
+          charge: parseFloat(cols[3])||0,
+          note: cols[5]||''
+        };
+        if (tx.date && tx.amount) newTx.push(tx);
+      }
+      if (!newTx.length) { showToast('❌ কোনো বৈধ ডেটা পাওয়া যায়নি', 'error'); return; }
+      if (!confirm(`${newTx.length} টি ট্রানজেকশন লোড হবে। বিদ্যমান ডেটা মুছে যাবে। নিশ্চিত?`)) return;
+      transactions = newTx;
+      saveData();
+      updateDashboard();
+      renderHistory();
+      showToast('✅ ' + newTx.length + ' টি ট্রানজেকশন রিস্টোর হয়েছে!', 'success');
+      showTab('history');
+    } catch(err) { showToast('❌ ফাইল পড়তে সমস্যা হয়েছে', 'error'); }
+  };
+  reader.readAsText(file, 'UTF-8');
+  input.value = '';
+}
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQ && line[i+1]==='"') { cur+='"'; i++; } else inQ=!inQ; }
+    else if (ch === ',' && !inQ) { result.push(cur.trim()); cur=''; }
+    else cur += ch;
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+// ===== CLEAR ALL =====
+function clearAllData() {
+  if (!confirm('সব ডেটা মুছে ফেলবেন? এটি পূর্বাবস্থায় ফেরানো যাবে না!')) return;
+  transactions = [];
+  saveData();
+  updateDashboard();
+  renderHistory();
+  showToast('🗑 সব ডেটা মুছে ফেলা হয়েছে', 'error');
+}
+
+// ===== TOAST =====
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', 3000);
+}
+
+// Set today's date as default
+document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+</script>
+</body>
+</html>
